@@ -1,9 +1,10 @@
 /aruco_node:
   ros__parameters:
-    marker_size: 0.15
+    marker_size: 0.1
+    namespace: "spot"
     # aruco_dictionary_id: DICT_5X5_250
     aruco_dictionary_id: DICT_APRILTAG_36h11
-    image_topic: /camera/camera/color/image_raw
-    camera_info_topic: /camera/camera/color/camera_info
-    camera_frame: "camera_color_optical_frame"
+    image_topic: /zed/zed_node/left/image_rect_color
+    camera_info_topic: /zed/zed_node/left/camera_info
+    camera_frame: "zed_left_camera_optical_frame"
     marker_frame: "marker"

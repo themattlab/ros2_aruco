@@ -59,6 +59,15 @@ class ArucoNode(rclpy.node.Node):
         )
 
         self.declare_parameter(
+            name="namespace",
+            value="spot",
+            descriptor=ParameterDescriptor(
+                type=ParameterType.PARAMETER_STRING,
+                description="Namespace to be applied to published topics, not camera input",
+            ),
+        )
+
+        self.declare_parameter(
             name="aruco_dictionary_id",
             value="DICT_5X5_250",
             descriptor=ParameterDescriptor(
@@ -108,6 +117,11 @@ class ArucoNode(rclpy.node.Node):
         )
         self.get_logger().info(f"Marker size: {self.marker_size}")
 
+        self.namespace = (
+            self.get_parameter("namespace").get_parameter_value().string_value
+        )
+        self.get_logger().info(f"Name Space: {self.namespace}")
+
         dictionary_id_name = (
             self.get_parameter("aruco_dictionary_id").get_parameter_value().string_value
         )
@@ -153,8 +167,8 @@ class ArucoNode(rclpy.node.Node):
         )
 
         # Set up publishers
-        self.poses_pub = self.create_publisher(PoseArray, "aruco_poses", 10)
-        self.markers_pub = self.create_publisher(ArucoMarkers, "aruco_markers", 10)
+        self.poses_pub = self.create_publisher(PoseArray, f"{self.namespace}/aruco_poses_zed", 10)
+        self.markers_pub = self.create_publisher(ArucoMarkers, f"{self.namespace}/aruco_markers_zed", 10)
         self.tf_pub = TransformBroadcaster(self)
         
         # Set up fields for camera parameters
@@ -232,7 +246,7 @@ class ArucoNode(rclpy.node.Node):
             marker_id = str(marker_id)
             marker_transform = TransformStamped()
             marker_transform.header.frame_id = self.camera_frame
-            marker_transform.header.stamp = markers.header.stamp
+            marker_transform.header.stamp = self._clock.now().to_msg()
             marker_transform.child_frame_id = self.marker_frame + "_" + marker_id
 
             marker_transform.transform.translation.x = markers.poses[i].position.x

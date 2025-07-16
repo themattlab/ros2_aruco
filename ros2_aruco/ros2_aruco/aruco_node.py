@@ -35,6 +35,8 @@ import numpy as np
 import cv2
 import tf_transformations
 from sensor_msgs.msg import CameraInfo
+from geometry_msgs.msg import TransformStamped
+from tf2_ros import TransformBroadcaster
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseArray, Pose
 from ros2_aruco_interfaces.msg import ArucoMarkers
@@ -42,6 +44,7 @@ from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 
 
 class ArucoNode(rclpy.node.Node):
+
     def __init__(self):
         super().__init__("aruco_node")
 
@@ -91,6 +94,15 @@ class ArucoNode(rclpy.node.Node):
             ),
         )
 
+        self.declare_parameter(
+            name="marker_frame",
+            value="",
+            descriptor=ParameterDescriptor(
+                type=ParameterType.PARAMETER_STRING,
+                description="Camera optical frame to use.",
+            ),
+        )
+
         self.marker_size = (
             self.get_parameter("marker_size").get_parameter_value().double_value
         )
@@ -113,6 +125,10 @@ class ArucoNode(rclpy.node.Node):
 
         self.camera_frame = (
             self.get_parameter("camera_frame").get_parameter_value().string_value
+        )
+
+        self.marker_frame = (
+            self.get_parameter("marker_frame").get_parameter_value().string_value
         )
 
         # Make sure we have a valid dictionary id:
@@ -139,7 +155,8 @@ class ArucoNode(rclpy.node.Node):
         # Set up publishers
         self.poses_pub = self.create_publisher(PoseArray, "aruco_poses", 10)
         self.markers_pub = self.create_publisher(ArucoMarkers, "aruco_markers", 10)
-
+        self.tf_pub = TransformBroadcaster(self)
+        
         # Set up fields for camera parameters
         self.info_msg = None
         self.intrinsic_mat = None
@@ -208,6 +225,22 @@ class ArucoNode(rclpy.node.Node):
 
             self.poses_pub.publish(pose_array)
             self.markers_pub.publish(markers)
+            self.publish_tf(markers)
+
+    def publish_tf(self, markers):
+        for i, marker_id in enumerate(markers.marker_ids):
+            marker_id = str(marker_id)
+            marker_transform = TransformStamped()
+            marker_transform.header.frame_id = self.camera_frame
+            marker_transform.header.stamp = markers.header.stamp
+            marker_transform.child_frame_id = self.marker_frame + "_" + marker_id
+
+            marker_transform.transform.translation.x = markers.poses[i].position.x
+            marker_transform.transform.translation.y = markers.poses[i].position.y
+            marker_transform.transform.translation.z = markers.poses[i].position.z
+
+            marker_transform.transform.rotation = markers.poses[i].orientation
+            self.tf_pub.sendTransform(marker_transform)
 
 
 def main():

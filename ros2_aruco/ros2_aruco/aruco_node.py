@@ -246,7 +246,8 @@ class ArucoNode(rclpy.node.Node):
             marker_id = str(marker_id)
             marker_transform = TransformStamped()
             marker_transform.header.frame_id = self.camera_frame
-            marker_transform.header.stamp = self._clock.now().to_msg()
+            # marker_transform.header.stamp = self._clock.now().to_msg()
+            marker_transform.header.stamp = markers.header.stamp
             marker_transform.child_frame_id = self.marker_frame + "_" + marker_id
 
             marker_transform.transform.translation.x = markers.poses[i].position.x
